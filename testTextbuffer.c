@@ -17,14 +17,14 @@
 //static void testAddPrefix();
 //static void testMergeTB(void);
 //static void testPasteTB(void);
-//static void testCutTB(void);
+static void testCutTB(void);
 
 int main(void) {
 	//testMergeTB();
 	//testNewTB();
 	//testAddPrefix();
 	//testPasteTB();
-	//testCutTB();
+	testCutTB();
 	// TODO: Call more test functions
 	
 	
@@ -88,7 +88,7 @@ int main(void) {
 	printf("newTB tests passed!\n");
 }*/
 
-/*static void testCutTB(void) {
+static void testCutTB(void) {
 	printf("-----------------------------------------\n"
 	       "               newTB tests               \n"
 	       "-----------------------------------------\n");
@@ -147,7 +147,7 @@ int main(void) {
 	
 	
 	printf("newTB tests passed!\n");
-}*/
+}
 
 /*static void testAddPrefix(){
 	printf("-----------------------------------------\n"
