@@ -1,0 +1,3 @@
+1. when using functions in string.h, make sure each stirng as arguments are "null-terminated", especially the dest string, !!even dest is empty!!(the first byte should be set to 0)
+2. size_t is a kind of "!!unsigned!! long int", so do not compare numbers with negative size_t
+ 
