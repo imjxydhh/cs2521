@@ -17,19 +17,57 @@
 //static void testAddPrefix();
 //static void testMergeTB(void);
 //static void testPasteTB(void);
-static void testCutTB(void);
+//static void testCutTB(void);
+//static void testSearchTB();
+static void testFormRichText();
 
 int main(void) {
 	//testMergeTB();
 	//testNewTB();
 	//testAddPrefix();
 	//testPasteTB();
-	testCutTB();
+	//testCutTB();
+	//testSearchTB();
+	testFormRichText();
 	// TODO: Call more test functions
 	
 	
 	printf("All tests passed! You are awesome!\n");
 }
+
+void testFormRichText(){
+	printf("-----------------------------------------\n"
+	       "           FormRichText tests            \n"
+	       "-----------------------------------------\n");
+	TB tb1 = newTB("sadsad*sad*\n_asdas__sad_\nasd**dsa\n*asd_dsasda*_\n*asd*_asd*_\n#\n#_asd_\ndas**dsa**\n");
+	formRichText(tb1);
+	char *text1 = dumpTB(tb1, false);
+	//printf("*%s*\n", text1);
+	assert(strcmp("sadsad<b>sad</b>\n<i>asdas</i><i>sad</i>\nasd**dsa\n<b>asd_dsasda</b>_\n<b>asd</b><i>asd*</i>\n#\n<h1>_asd_</h1>\ndas*<b>dsa</b>*\n", text1) == 0);
+	free(text1);
+	releaseTB(tb1);
+	printf("FormRichText tests passed!\n");
+}
+
+/*static void testSearchTB(){
+	printf("-----------------------------------------\n"
+	       "              searchTB tests             \n"
+	       "-----------------------------------------\n");
+	TB tb1 = newTB("abracadabra alacazam\nabracadabracadabracadabracadabra\n");
+	Match result = searchTB(tb1, "abracadabra");
+	assert(result->lineNumber == 1);
+	assert(result->columnNumber == 1);
+	assert(result->next->lineNumber == 2);
+	assert(result->next->columnNumber == 1);
+	assert(result->next->next->lineNumber == 2);
+	assert(result->next->next->columnNumber == 15);
+	while(result != NULL){
+		Match tmp = result;
+		result = result->next;
+		free(tmp);
+	}
+	releaseTB(tb1);
+}*/
 
 /*static void testMergeTB(void){
 	printf("-----------------------------------------\n"
@@ -88,7 +126,7 @@ int main(void) {
 	printf("newTB tests passed!\n");
 }*/
 
-static void testCutTB(void) {
+/*static void testCutTB(void) {
 	printf("-----------------------------------------\n"
 	       "               newTB tests               \n"
 	       "-----------------------------------------\n");
@@ -147,7 +185,7 @@ static void testCutTB(void) {
 	
 	
 	printf("newTB tests passed!\n");
-}
+}*/
 
 /*static void testAddPrefix(){
 	printf("-----------------------------------------\n"

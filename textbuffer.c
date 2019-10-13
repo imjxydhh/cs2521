@@ -397,7 +397,7 @@ void mergeTB (TB tb1, int pos, TB tb2) {
 		theLine->prev = tb2->last->next;
 	}
 	tb1->length = tb1->length + tb2->length;
-	//printf("**now tb1:\nfirst %s\ncurr %s\nlast %s\n",tb1->first->data,tb1->curr->data, tb1->last->data);
+	//printf("**now tb1:\nfirst %s\ncurr %s\nlast %s\n",tb1->first->data,tb1->curr->data, tb1->last->data); ******only for testing******
 	free(tb2);
 }
 
@@ -490,6 +490,34 @@ TB cutTB (TB tb, int from, int to) {
 	return result;
 }
 
+/** 
+ * calculate the prefix function of a given string
+ */ 
+static void prefixFunction(int *result, char *text){
+	result[0] = 0;
+	int k = 0;
+	for(int q = 1;q < strlen(text) - 1; q++){
+		while(text[k] != text[q] && k > 0){
+			k = result[k - 1];
+		}
+		if(text[k] == text[q]){
+			k++;
+		}
+		result[q] = k;
+	}
+}
+
+/** 
+ * Get a new Match Node
+ */ 
+static Match newMatchNode(int line, int col){
+	Match newNode = malloc(sizeof(*newNode));
+	newNode->columnNumber = col;
+	newNode->lineNumber = line;
+	newNode->next = NULL;
+	return newNode;
+}
+
 /**
  * Return  a  linked list of match nodes containing the positions of all
  * of the matches of string 'search' in 'tb'.
@@ -497,8 +525,62 @@ TB cutTB (TB tb, int from, int to) {
  * - The user is responsible for freeing the returned list.
  */
 Match searchTB (TB tb, char *search) {
-	return NULL;
+	if(tb == NULL){
+		fprintf(stderr, "The textBuffer doesn't exist.\n");
+		abort();
+	}else if(search == NULL){
+		fprintf(stderr, "The search string can not be NULL");
+		abort();
+	}else if(!strcmp(search, "")){
+		return NULL;
+	}
+	Match result = NULL;
+	Match currMatch = result;
+	Node curr = tb->first;
+	int lineNum = 1;
+
+	/** 
+	 * Because the results should not overlap, we don't need to know the
+	 * longest prefix of a entirely matched string, so we only need an
+	 * array with a length of "strlen(search) - 1"
+	 */
+	int prefixFunc[strlen(search) - 1];
+	prefixFunction(prefixFunc, search);
+
+	while(curr != NULL){
+	// search all nodes in the list
+		char *currStr = curr->data;
+		int matchNum = 0;
+		for(int shift = 0;shift - matchNum <= strlen(currStr) - strlen(search);shift++){
+			while(search[matchNum] != currStr[shift] && matchNum > 0){
+				matchNum = prefixFunc[matchNum - 1];
+			}
+			if(search[matchNum] == currStr[shift]){
+				matchNum++;
+			}
+			if(matchNum == strlen(search)){
+				if(result == NULL){
+					result = newMatchNode(lineNum, shift - strlen(search) + 2);
+					currMatch = result;
+				}else{
+					currMatch->next = newMatchNode(lineNum, shift - strlen(search) + 2);
+					currMatch = currMatch->next;
+				}
+				matchNum = 0;
+			}
+		}
+		lineNum++;
+		curr = curr->next;
+	}
+	return result;
 }
+/**
+ * Acknowlege: the core algorithm(kmp) of searchTB() and prefixFunction() 
+ * is written based on the pseudocode on page 1005 and page 1006 of
+ * the book Introduction to Algorithms(3rd Edition) by Thomas H. Cormnen, et al
+ */
+
+
 
 /**
  * Remove  the  lines between 'from' and 'to' (inclusive) from the given
@@ -512,12 +594,106 @@ void deleteTB (TB tb, int from, int to) {
 }
 
 /**
+ * Replace special characters at specific position with specific content
+ */ 
+static char *replaceRichText(char *text, int left, int right){
+	char *newStr = NULL;
+	char leftStr[5];
+	char rightStr[6];
+	int len = strlen(text);
+	switch (text[left]){
+	case '#':
+		sprintf(leftStr, "<h1>");
+		sprintf(rightStr, "</h1>");
+		newStr = malloc(sizeof(char) * (len + 10));
+		break;
+	case '*':
+		sprintf(leftStr, "<b>");
+		sprintf(rightStr, "</b>");
+		newStr = malloc(sizeof(char) * (len + 8));
+		break;
+	case '_':
+		sprintf(leftStr, "<i>");
+		sprintf(rightStr, "</i>");
+		newStr = malloc(sizeof(char) * (len + 8));
+		break;
+	default:
+		fprintf(stderr, "replaceRichText() Switch error!!\n");
+		break;
+	}
+	newStr[0] = 0;
+	if(left > 0){
+		char leftPart[left + 1];
+		strncpy(leftPart, text, left);
+		leftPart[left] = 0;
+		strcat(newStr, leftPart);
+	}
+	strcat(newStr, leftStr);
+	char midPart[right - left];
+	strncpy(midPart, text + left + 1, right - left - 1);
+	midPart[right - left - 1] = 0;
+	strcat(newStr, midPart);
+	strcat(newStr, rightStr);
+	if(right < len - 1){
+		char rightPart[len - right];
+		strncpy(rightPart, text + right + 1, len - right - 1);
+		rightPart[len - right - 1] = 0;
+		strcat(newStr, rightPart);
+	}
+	return newStr;
+}
+
+/**
  * Search  every  line of the given textbuffer for every occurrence of a
  * set of specified substitutions and alter them accordingly.
  * - Refer to the spec for details.
  */
 void formRichText (TB tb) {
-
+	if(tb == NULL){
+		fprintf(stderr, "The textBuffer doesn't exist.\n");
+		abort();
+	}
+	Node curr = tb->first;
+	
+	while(curr != NULL){
+		char *str = curr->data;
+		char mode = 0;
+		int backPoint = 0;
+		int left = -1;
+		if(str[0] == '#' && strlen(str) > 1){
+			curr->data = replaceRichText(str, 0, strlen(str)+1);
+			free(str);
+		}else{
+			for(int i = 0;i < strlen(str);i++){
+				if(str[i] == '*' || str[i] == '_'){
+					if(left == -1){
+						left = i;
+						mode = str[i];
+						backPoint = i;
+					}else if(str[i] == mode){
+						if(i != left + 1){
+							char *tmp = str;
+							str = replaceRichText(str, left, i);
+							free(tmp);
+							i += 5;
+							mode = 0;
+							left = -1;
+						}else{
+							left = i;
+						}
+					}
+				}
+				if(mode && i == strlen(str) - 1){
+					i = backPoint;
+					mode = 0;
+					left = -1;
+				}
+			}
+			// here curr->data may be freed
+			curr->data = str;
+		}
+		curr = curr->next;
+	}
 }
 
 ////////////////////////////////////////////////////////////////////////
