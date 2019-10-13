@@ -19,7 +19,7 @@
 //static void testPasteTB(void);
 //static void testCutTB(void);
 //static void testSearchTB();
-static void testFormRichText();
+//static void testFormRichText();
 
 int main(void) {
 	//testMergeTB();
@@ -28,14 +28,14 @@ int main(void) {
 	//testPasteTB();
 	//testCutTB();
 	//testSearchTB();
-	testFormRichText();
+	//testFormRichText();
 	// TODO: Call more test functions
 	
 	
 	printf("All tests passed! You are awesome!\n");
 }
 
-void testFormRichText(){
+/*void testFormRichText(){
 	printf("-----------------------------------------\n"
 	       "           FormRichText tests            \n"
 	       "-----------------------------------------\n");
@@ -47,7 +47,7 @@ void testFormRichText(){
 	free(text1);
 	releaseTB(tb1);
 	printf("FormRichText tests passed!\n");
-}
+}*/
 
 /*static void testSearchTB(){
 	printf("-----------------------------------------\n"
