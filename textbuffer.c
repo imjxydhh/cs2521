@@ -240,7 +240,7 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 /** 
  * Return the number of lines of the given textbuffer.
  */
-int linesTB (TB tb) { //DONE
+int linesTB (TB tb) { 
 	return tb->length;
 }
 
@@ -491,12 +491,19 @@ TB cutTB (TB tb, int from, int to) {
 }
 
 /** 
+ * Compare against the text itselft to
  * calculate the prefix function of a given string
  */ 
 static void prefixFunction(int *result, char *text){
 	result[0] = 0;
 	int k = 0;
 	for(int q = 1;q < strlen(text) - 1; q++){
+	/** 
+	 * here the threshold is strlen(text) - 1 beacause
+	 * each results will not overlab with each other. If
+	 * we find a full match, we will just start searching 
+	 * next match from the end of this match
+	 */
 		while(text[k] != text[q] && k > 0){
 			k = result[k - 1];
 		}
@@ -508,7 +515,7 @@ static void prefixFunction(int *result, char *text){
 }
 
 /** 
- * Get a new Match Node
+ * Get a new initialized Match Node
  */ 
 static Match newMatchNode(int line, int col){
 	Match newNode = malloc(sizeof(*newNode));
@@ -519,7 +526,7 @@ static Match newMatchNode(int line, int col){
 }
 
 /**
- * Return  a  linked list of match nodes containing the positions of all
+ * Return a linked list of match nodes containing the positions of all
  * of the matches of string 'search' in 'tb'.
  * - The textbuffer 'tb' should remain unmodified.
  * - The user is responsible for freeing the returned list.
@@ -532,6 +539,7 @@ Match searchTB (TB tb, char *search) {
 		fprintf(stderr, "The search string can not be NULL");
 		abort();
 	}else if(!strcmp(search, "")){
+	// the case that the search text is an empty string
 		return NULL;
 	}
 	Match result = NULL;
@@ -550,22 +558,35 @@ Match searchTB (TB tb, char *search) {
 	while(curr != NULL){
 	// search all nodes in the list
 		char *currStr = curr->data;
+
+		// Number of characters that are currently matched
 		int matchNum = 0;
+
 		for(int shift = 0;shift - matchNum <= strlen(currStr) - strlen(search);shift++){
 			while(search[matchNum] != currStr[shift] && matchNum > 0){
+			/** 
+			 * when next character could not match, find the longest suffix via prefix funtion
+			 * as the new beginning of a match
+			 */
 				matchNum = prefixFunc[matchNum - 1];
 			}
 			if(search[matchNum] == currStr[shift]){
+			// if next character can match then just move to next character in the string
 				matchNum++;
 			}
 			if(matchNum == strlen(search)){
+			// if find a full match then add the node to our result list
 				if(result == NULL){
+				// the case that there is no node in the list yet
 					result = newMatchNode(lineNum, shift - strlen(search) + 2);
 					currMatch = result;
 				}else{
+				// the case that the list contains at least one node
 					currMatch->next = newMatchNode(lineNum, shift - strlen(search) + 2);
 					currMatch = currMatch->next;
 				}
+
+				// reset the number of characters that are already matched
 				matchNum = 0;
 			}
 		}
@@ -576,8 +597,8 @@ Match searchTB (TB tb, char *search) {
 }
 /**
  * Acknowlege: the core algorithm(kmp) of searchTB() and prefixFunction() 
- * is written based on the pseudocode on page 1005 and page 1006 of
- * the book Introduction to Algorithms(3rd Edition) by Thomas H. Cormnen, et al
+ * is written based on the pseudocode on page 1005 and page 1006 of the book 
+ * Introduction to Algorithms(3rd Edition) by Thomas H. Cormnen, et al
  */
 
 
@@ -595,21 +616,32 @@ void deleteTB (TB tb, int from, int to) {
 
 /**
  * Replace special characters at specific position with specific content
+ * @param left : the position of the left one special sign(*, _ or #)
+ * @param right : the postion of the right one special sign(* or _), or 
+ * 				  strlen(text) if the special sign is #
+ * @return A new string which is a copy of the original string and the 
+ * 		   special sign on the specified place are repleaced with corresponding
+ *         rich text
  */ 
 static char *replaceRichText(char *text, int left, int right){
 	char *newStr = NULL;
 	char leftStr[5];
 	char rightStr[6];
 	int len = strlen(text);
+
 	switch (text[left]){
 	case '#':
 		sprintf(leftStr, "<h1>");
 		sprintf(rightStr, "</h1>");
+
+		// there are 9 new character + a '\0' so it's (len + 10)
 		newStr = malloc(sizeof(char) * (len + 10));
 		break;
 	case '*':
 		sprintf(leftStr, "<b>");
 		sprintf(rightStr, "</b>");
+
+		// there are 7 new character + a '\0' so it's (len + 8)
 		newStr = malloc(sizeof(char) * (len + 8));
 		break;
 	case '_':
@@ -621,8 +653,13 @@ static char *replaceRichText(char *text, int left, int right){
 		fprintf(stderr, "replaceRichText() Switch error!!\n");
 		break;
 	}
+
+	// null-terminate the new string so that string function can be applied
 	newStr[0] = 0;
+
 	if(left > 0){
+	// The case that the left position is not on the edge of the string
+	// copy the part on the left hand side of the left special sign to the new string
 		char leftPart[left + 1];
 		strncpy(leftPart, text, left);
 		leftPart[left] = 0;
@@ -635,6 +672,8 @@ static char *replaceRichText(char *text, int left, int right){
 	strcat(newStr, midPart);
 	strcat(newStr, rightStr);
 	if(right < len - 1){
+	// The case that the right position is not on the edge of the string
+	// copy the part on the right hand side of the left special sign to the new string
 		char rightPart[len - right];
 		strncpy(rightPart, text + right + 1, len - right - 1);
 		rightPart[len - right - 1] = 0;
@@ -656,21 +695,39 @@ void formRichText (TB tb) {
 	Node curr = tb->first;
 	
 	while(curr != NULL){
+	// Search all nodes in the textBuffer
 		char *str = curr->data;
+		
+		// Used to record the which sign we are considering now
+		// can be '*' or '_'
 		char mode = 0;
+
 		int backPoint = 0;
+
+		//used to record the position of left special sign
 		int left = -1;
+
 		if(str[0] == '#' && strlen(str) > 1){
+		/** 
+		 * if there is # sign at the beginning of the string and the string
+		 * has other content, we can ignore all other internal special signs
+		 * as we ignore nesting
+		 */
 			curr->data = replaceRichText(str, 0, strlen(str)+1);
 			free(str);
 		}else{
 			for(int i = 0;i < strlen(str);i++){
 				if(str[i] == '*' || str[i] == '_'){
 					if(left == -1){
+					/** 
+					 * the case that no special signs have been encountered 
+					 * or a pair of special signs have just been replaced
+					 */
 						left = i;
 						mode = str[i];
 						backPoint = i;
 					}else if(str[i] == mode){
+					// the case that we have found a pair of special signs
 						if(i != left + 1){
 							char *tmp = str;
 							str = replaceRichText(str, left, i);
@@ -679,11 +736,23 @@ void formRichText (TB tb) {
 							mode = 0;
 							left = -1;
 						}else{
+						/** 
+						 * The case that there is no content between this pair
+						 * of special signs. The use the right special sign as
+						 * the new left special sign
+						 */
+
 							left = i;
 						}
 					}
 				}
 				if(mode && i == strlen(str) - 1){
+				/** 
+				 * A special case that there is not a corresponding right sign
+				 * to a * or _ in the string. Then we go back to the next position
+				 * of that left special sign to inspect if there is the other kind of
+				 * special sign in the string
+				 */	
 					i = backPoint;
 					mode = 0;
 					left = -1;

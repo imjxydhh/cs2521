@@ -6,6 +6,10 @@ void test(char *text){
 }
 int main(void){
 	test("");
+	int a = 5;
+	printf("%d",a);
+	a = 10;
+	a = 20;
 }
 
 
