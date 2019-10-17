@@ -423,7 +423,10 @@ void mergeTB (TB tb1, int pos, TB tb2) {
  * - The program should abort() with an error message if 'pos' is out of
  *   range.
  */
-void pasteTB (TB tb1, int pos, TB tb2) {;
+void pasteTB (TB tb1, int pos, TB tb2) {
+	if(pos != tb1->length + 1){
+		CheckInBound(tb1, tb2, &pos, NULL);
+	}
 	if(tb2 == NULL){
 		fprintf(stderr, "TextBuffer tb2 doesn't exist.\n");
 		releaseTB(tb1);
