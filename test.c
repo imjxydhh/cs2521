@@ -5,11 +5,9 @@ void test(char *text){
 	printf("%d\n",strcmp(text, "a"));
 }
 int main(void){
-	test("");
-	int a = 5;
-	printf("%d",a);
-	a = 10;
-	a = 20;
+	int a[10] = {0};
+	a[0] = 0;
+	printf("%d", a[5] == 0);
 }
 
 

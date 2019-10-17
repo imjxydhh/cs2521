@@ -19,6 +19,18 @@ struct textbuffer {
 };
 
 /**
+ * This structure is used in diffTB's helper function getOperation()
+ * used to return the new String and the size of the string simultaneously 
+ */
+struct newString{
+	char *dest;
+	int size;
+};
+
+typedef struct newString *newStr;
+
+
+/**
  * Allocate a new textNode whose contents is initialised with the text
  * in the given string.
  */
@@ -606,8 +618,7 @@ Match searchTB (TB tb, char *search) {
 /**
  * Remove  the  lines between 'from' and 'to' (inclusive) from the given
  * textbuffer 'tb'.
- * - The  program should abort() with an error message if 'from' or 'to'
- *   is out of range.
+ * - The  program should abort() with an error message if 'from' or 'to' is out of range.
  */
 void deleteTB (TB tb, int from, int to) {
 	TB tmp = cutTB(tb, from, to);
@@ -617,11 +628,8 @@ void deleteTB (TB tb, int from, int to) {
 /**
  * Replace special characters at specific position with specific content
  * @param left : the position of the left one special sign(*, _ or #)
- * @param right : the postion of the right one special sign(* or _), or 
- * 				  strlen(text) if the special sign is #
- * @return A new string which is a copy of the original string and the 
- * 		   special sign on the specified place are repleaced with corresponding
- *         rich text
+ * @param right : the postion of the right one special sign(* or _), or strlen(text) if the special sign is #
+ * @return A new string which is a copy of the original string and the special sign on the specified place are repleaced with corresponding rich text
  */ 
 static char *replaceRichText(char *text, int left, int right){
 	char *newStr = NULL;
@@ -696,6 +704,7 @@ void formRichText (TB tb) {
 	
 	while(curr != NULL){
 	// Search all nodes in the textBuffer
+
 		char *str = curr->data;
 		
 		// Used to record the which sign we are considering now
@@ -768,9 +777,169 @@ void formRichText (TB tb) {
 ////////////////////////////////////////////////////////////////////////
 // Bonus challenges
 
-char *diffTB (TB tb1, TB tb2) {
-	return NULL;
+/**
+ * This funciton is used to initialize some arrays created in diffTB() 
+ */
+static void initialize(Node *tb1Arr, TB tb1, Node *tb2Arr, TB tb2, Node *sameLines){
+	Node curr1 = tb1->first;
+	Node curr2 = tb2->first;
+	for(int i = 0;i < tb1->length;i++){
+		tb1Arr[i] = curr1;
+		curr1 = curr1->next;
+	}
+	for(int i = 0;i < tb2->length;i++){
+		tb2Arr[i] = curr2;
+		curr2 = curr2->next;
+	}
+	
+	for(int i = 0;i < tb2->length;i++){
+		sameLines[i] = NULL;
+	}
 }
+
+/**
+ * This funciton append an operation string to the destination string which should be
+ * the result of diffTB()
+ * @param src: The content to be add as a new line if the mode is 0(adding a new line).Should be NULL if the mode is 1(deleting a new line).            
+ * @param mode: 0 represents adding a line, 1 represents delete a line
+ */ 
+static newStr getOperation(char *dest, int size, char *src, int position, int mode){
+	char tmp[14];
+
+	// This is the structure used to store the new String and the size of the new String
+	newStr newStr = malloc(sizeof(*newStr));
+	
+	sprintf(tmp, "%d", position);
+	if(mode == 0){
+	// The case that the function is called to append an add operation
+		if(size - strlen(dest) - strlen(tmp) <= strlen(src) + 4){
+		// Here "+ 4" is because we should take '+' and two ',' and a '\n' into account 
+			size += (strlen(src) + strlen(tmp) + 4);
+			dest = allocStr(dest, size);
+			size += 100;
+		}
+		sprintf(tmp, "+,%d,", position);
+		strcat(dest, tmp);
+		strcat(dest, src);
+	}else{
+	// The case that the function is called to append an delete operation
+		if(size - strlen(dest) - strlen(tmp) <= 3){
+		// Here "+ 3" is because we should take '+' and ',' and a '\n' into account
+			size += (strlen(tmp) + 3);
+			dest = allocStr(dest, size);
+			size += 100;
+		}
+		sprintf(tmp, "-,%d", position);
+		strcat(dest, tmp);
+	}
+	strcat(dest, "\n");
+	newStr->dest = dest;
+	newStr->size = size;
+	return newStr;
+}
+
+char *diffTB (TB tb1, TB tb2) {
+	if(tb1 == NULL || tb2 == NULL){
+		fprintf(stderr, "TextBuffer doesn't exist.\n");
+		abort();
+	}
+	int size = 25;
+	char *result = allocStr(NULL, size);
+
+	// Transmit the textBuffer to array to make access of nodes more convenient
+	Node tb1Arr[tb1->length];
+	Node tb2Arr[tb2->length];
+
+	// This array is used to store common lines of tb1 and tb2 
+	Node sameLines[tb2->length];
+	
+	// The DP array to store each state of the comparation
+	int maxLen[tb1->length + 1][tb2->length + 1];
+	// Initialization
+	for(int i = 0;i< tb2->length + 1;i++){
+		for (int j = 0; j < tb1->length + 1; j++){
+			maxLen[j][i] = 0;
+		}
+	}
+
+	initialize(tb1Arr, tb1, tb2Arr, tb2, sameLines);
+
+	// fill the DP array
+	for(int i = 1;i < tb1->length + 1;i++){
+		for(int j = 1;j < tb2->length + 1;j++){
+			if(strcmp(tb1Arr[i-1]->data, tb2Arr[j-1]->data)){
+				maxLen[i][j] = maxLen[i-1][j] > maxLen[i][j-1]?maxLen[i-1][j]:maxLen[i][j-1];
+			}else{
+				maxLen[i][j] = 1 + maxLen[i-1][j-1];
+			}
+		}
+	}
+
+	int i = tb1->length;
+	int j = tb2->length;
+
+	// Backtrack to find the specific longest common subsequence
+	while(i != 0 && j != 0){
+		if(strcmp(tb1Arr[i-1]->data, tb2Arr[j-1]->data)){
+			if(maxLen[i-1][j] > maxLen[i][j-1]){
+				i--;
+			}else{
+				j--;
+			}
+		}else{
+			sameLines[j-1] = tb1Arr[i-1];
+			i--;
+			j--;
+		}
+	}
+	
+	// delete all other nodes in tb1
+	Node curr1 = tb1->first;
+	i = 1;
+	j = 0;
+	while(j < tb2->length){
+		if(sameLines[j] == NULL){
+		// Go until next common line is reached
+			j++;
+		}else{
+			if(curr1 != sameLines[j]){
+			// this line is not in the longest common line
+				newStr newStr = getOperation(result, size, NULL, i, 1);
+				result = newStr->dest;
+				size = newStr->size;
+				free(newStr);		
+			}else{
+				j++;
+				i++;
+			}
+			curr1 = curr1->next;
+		}
+	}
+	while(curr1 != NULL){
+		newStr newStr = getOperation(result, size, NULL, i, 1);
+		result = newStr->dest;
+		size = newStr->size;
+		free(newStr);
+		curr1 = curr1->next;
+	}
+
+	i = 1;
+	// insert lacking nodes into tb1
+	for(int j = 0;j < tb2->length;j++){
+		if(sameLines[j] == NULL){
+			newStr newStr = getOperation(result, size, tb2Arr[j]->data, i, 0);
+			result = newStr->dest;
+			size = newStr->size;
+			free(newStr);
+		}
+		i++;
+	}
+	return result;
+}
+/**
+ * Declaration: This funtion uses Dynamic programming, but it's entirely written by
+ *              myself and no pseudocode is followed 
+ */
 
 void undoTB (TB tb) {
 

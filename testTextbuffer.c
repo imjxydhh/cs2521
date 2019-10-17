@@ -20,6 +20,7 @@
 //static void testCutTB(void);
 //static void testSearchTB();
 //static void testFormRichText();
+//static void testDiffTB();
 
 int main(void) {
 	//testMergeTB();
@@ -29,11 +30,26 @@ int main(void) {
 	//testCutTB();
 	//testSearchTB();
 	//testFormRichText();
+	//testDiffTB();
 	// TODO: Call more test functions
 	
 	
 	printf("All tests passed! You are awesome!\n");
 }
+
+/*static void testDiffTB(){
+	printf("-----------------------------------------\n"
+	       "              diffTB tests               \n"
+	       "-----------------------------------------\n");
+	TB tb1 = newTB("1\n2\nabc\n3\n4\n5\n6\n7\nabc\n3\n4\n5\n6\n");
+	TB tb2 = newTB("dsa\ndsa\ndsa\nadsabc\ndsad\ndsad\ndsa\ndsa\nddd\n");
+	char *text1 = diffTB(tb1, tb2);
+	printf("*%s*\n", text1);
+	free(text1);
+	releaseTB(tb1);
+	releaseTB(tb2);
+	printf("DiffTB tests passed!\n");
+}*/
 
 /*void testFormRichText(){
 	printf("-----------------------------------------\n"
