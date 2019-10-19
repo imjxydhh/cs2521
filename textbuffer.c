@@ -57,22 +57,21 @@ static void pushInCache(TB tb, int position, int type, TB content){
 	char *tmp = dumpTB(content, false);
 	TB tbCopy = newTB(tmp);
 	free(tmp);
-	
+	textCache operation = malloc(sizeof(*operation));
+	if(operation == NULL){
+		fprintf(stderr, "Memory allocation failed.\n");
+		releaseTB(tb);
+		abort();
+	}
+	operation->content = tbCopy;
+	operation->position = position;
+	operation->type = type;
 	if(tb->pointer < 10){
 		if(tb->cache[tb->pointer] != NULL){
 			releaseTB(tb->cache[tb->pointer]->content);
 			free(tb->cache[tb->pointer]);
 		}
-		textCache operation = malloc(sizeof(*operation));
-		if(operation == NULL){
-			fprintf(stderr, "Memory allocation failed.\n");
-			releaseTB(tb);
-			abort();
-		}
 		tb->cache[tb->pointer] = operation;
-		tb->cache[tb->pointer]->content = tbCopy;
-		tb->cache[tb->pointer]->position = position;
-		tb->cache[tb->pointer]->type = type;
 		(tb->pointer)++;
 		if((tb->pointer < 10) && tb->cache[tb->pointer] != NULL){
 			releaseTB(tb->cache[tb->pointer]->content);
@@ -83,19 +82,11 @@ static void pushInCache(TB tb, int position, int type, TB content){
 		releaseTB(tb->cache[0]->content);
 		free(tb->cache[0]);
 		memmove(tb->cache, tb->cache + 1, sizeof(textCache) * 9);
-		textCache operation = malloc(sizeof(*operation));
-		if(operation == NULL){
-			fprintf(stderr, "Memory allocation failed.\n");
-			releaseTB(tb);
-			abort();
-		}
 		tb->cache[tb->pointer - 1] = operation;
-		tb->cache[tb->pointer - 1]->content = tbCopy;
-		tb->cache[tb->pointer - 1]->position = position;
-		tb->cache[tb->pointer - 1]->type = type;
 	}else{
 		fprintf(stderr,"Internal error: Abnormal value");
 		releaseTB(tbCopy);
+		free(operation);
 	}
 }
 
@@ -318,8 +309,8 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 		strcat(str, thisLine);
 		if(showLineNumbers){
 		/** 
-		 * in this condition, thisLine is seperately allocated and 
-		 * will not be used again. it needs to be freeed
+		 * in this condition, thisLine(prefix) is seperately allocated and 
+		 * will not be used again. it needs to be freed
 		 */	
 			free(thisLine);
 		}
@@ -1036,7 +1027,7 @@ void undoTB (TB tb) {
 	if(cache[pointer]->type == 0){
 		pasteTB(tb, cache[pointer]->position + 1, cache[pointer]->content);
 	}else if(cache[pointer]->type == 1){
-		deleteTB(tb, cache[pointer]->position + 1, cache[pointer]->content->length);
+		deleteTB(tb, cache[pointer]->position + 1, cache[pointer]->position + cache[pointer]->content->length);
 	}
 	tb->pointer = pointer;
 }
@@ -1051,7 +1042,7 @@ void redoTB (TB tb) {
 		if(cache[pointer]->type == 1){
 			pasteTB(tb, cache[pointer]->position + 1, cache[pointer]->content);
 		}else if(cache[pointer]->type == 0){
-			deleteTB(tb, cache[pointer]->position + 1, cache[pointer]->content->length);
+			deleteTB(tb, cache[pointer]->position + 1, cache[pointer]->position + cache[pointer]->content->length);
 		}
 		tb->pointer = pointer + 1;
 	}
