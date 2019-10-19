@@ -5,6 +5,20 @@
 
 #include "textbuffer.h"
 
+/**
+ * This structure is used to store the operations that has been done to 
+ * a textbuffer. 
+ * If type is 0, the operation is removing. If type is 1, the operation is inserting.
+ * position store the postion right before the inserting or removing postion
+ */
+struct textCache{
+	TB content;
+	int type;
+	int position;
+};
+
+typedef struct textCache *textCache;
+
 typedef struct textNode {
 	char *data;
 	struct textNode *next;
@@ -16,6 +30,8 @@ struct textbuffer {
 	Node curr;
 	Node last;
 	int length;
+	textCache cache[10];
+	int pointer;
 };
 
 /**
@@ -29,6 +45,59 @@ struct newString{
 
 typedef struct newString *newStr;
 
+
+/**
+ * Push an opeartion into cache after any insertion or deletion
+ */
+static void pushInCache(TB tb, int position, int type, TB content){
+	if(tb->pointer == -1){
+	// The case that this funtion is called because of undo or redo, do nothing
+		return;
+	}
+	char *tmp = dumpTB(content, false);
+	TB tbCopy = newTB(tmp);
+	free(tmp);
+	
+	if(tb->pointer < 10){
+		if(tb->cache[tb->pointer] != NULL){
+			releaseTB(tb->cache[tb->pointer]->content);
+			free(tb->cache[tb->pointer]);
+		}
+		textCache operation = malloc(sizeof(*operation));
+		if(operation == NULL){
+			fprintf(stderr, "Memory allocation failed.\n");
+			releaseTB(tb);
+			abort();
+		}
+		tb->cache[tb->pointer] = operation;
+		tb->cache[tb->pointer]->content = tbCopy;
+		tb->cache[tb->pointer]->position = position;
+		tb->cache[tb->pointer]->type = type;
+		(tb->pointer)++;
+		if((tb->pointer < 10) && tb->cache[tb->pointer] != NULL){
+			releaseTB(tb->cache[tb->pointer]->content);
+			free(tb->cache[tb->pointer]);
+			tb->cache[tb->pointer] = NULL;
+		}
+	}else if(tb->pointer == 10){
+		releaseTB(tb->cache[0]->content);
+		free(tb->cache[0]);
+		memmove(tb->cache, tb->cache + 1, sizeof(textCache) * 9);
+		textCache operation = malloc(sizeof(*operation));
+		if(operation == NULL){
+			fprintf(stderr, "Memory allocation failed.\n");
+			releaseTB(tb);
+			abort();
+		}
+		tb->cache[tb->pointer - 1] = operation;
+		tb->cache[tb->pointer - 1]->content = tbCopy;
+		tb->cache[tb->pointer - 1]->position = position;
+		tb->cache[tb->pointer - 1]->type = type;
+	}else{
+		fprintf(stderr,"Internal error: Abnormal value");
+		releaseTB(tbCopy);
+	}
+}
 
 /**
  * Allocate a new textNode whose contents is initialised with the text
@@ -65,11 +134,15 @@ TB newTB (char *text) {
 	}
 	TB new = malloc(sizeof(*new));
 	if(new == NULL){
-		fprintf(stderr, "memory allocation failed.\n");
+		fprintf(stderr, "Memory allocation failed.\n");
 		return NULL;
 	}
 	new->first = new->curr = new->last = NULL;
 	new->length = 0;
+	new->pointer = 0;
+	for(int i = 0;i < 10;i++){
+		new->cache[i] = NULL;
+	}
 	if(!strcmp(text, "")){
 	// text is an empty string
 		return new;
@@ -83,7 +156,7 @@ TB newTB (char *text) {
 		// there is an empty line
 			nNode = newNode("\n", 0);
 			if(nNode == NULL){
-				fprintf(stderr, "memory allocation failed.\n");
+				fprintf(stderr, "Memory allocation failed.\n");
 				releaseTB(new);
 				return NULL;
 			}
@@ -97,7 +170,7 @@ TB newTB (char *text) {
 				oneLine[end - start] = 0;
 				nNode = newNode(oneLine, end -start); 
 				if(nNode == NULL){
-					fprintf(stderr, "memory allocation failed.\n");
+					fprintf(stderr, "Memory allocation failed.\n");
 					releaseTB(new);
 					return NULL;
 				}
@@ -131,14 +204,22 @@ TB newTB (char *text) {
 }
 
 /**
- * Free  the  memory occupied by the given textbuffer. It is an error to
+ * Free the memory occupied by the given textbuffer. It is an error to
  * access the buffer afterwards.
  */
 void releaseTB (TB tb) {
 	if(tb == NULL){
 		return;
 	}
-	// first release all nodes
+
+	// First release all caches
+	for (int i = 0; i < 10; i++){
+		if(tb->cache[i] != NULL){
+			releaseTB(tb->cache[i]->content);
+			free(tb->cache[i]);
+		}
+	}
+	// Then release all nodes
 	Node curr = tb->first;
 	while(curr != NULL){
 		Node tmp = curr->next;
@@ -146,7 +227,7 @@ void releaseTB (TB tb) {
 		free(curr);
 		curr = tmp;
 	}
-	// finally release TB itself
+	// Finally release TB itself
 	free(tb);	
 }
 
@@ -204,7 +285,7 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 	int size = 25;
 	str = allocStr(str, size);
 	if(str == NULL){
-		fprintf(stderr, "memory allocation failed.\n");
+		fprintf(stderr, "Memory allocation failed.\n");
 		return NULL;
 	}
 	while(curr != NULL){
@@ -218,7 +299,7 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 			str = allocStr(str, size);
 			size += 100;
 			if(str == NULL){
-				fprintf(stderr, "memory allocation failed.\n");
+				fprintf(stderr, "Memory allocation failed.\n");
 				return NULL;
 			}
 		}
@@ -226,7 +307,7 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 		if(showLineNumbers){
 			char *prefix = getPrefix(strlen(curr->data) + 1, position);
 			if(prefix == NULL){
-				fprintf(stderr, "memory allocation failed.\n");
+				fprintf(stderr, "Memory allocation failed.\n");
 				free(str);
 				return NULL;
 			}
@@ -376,7 +457,7 @@ void mergeTB (TB tb1, int pos, TB tb2) {
 		free(tb2);
 		return;
 	}
-
+	pushInCache(tb1, pos - 1, 1, tb2);
 	Node theLine = tb1->first;
 	while(pos > 1){
 	// move theLine to the line corresponding to pos
@@ -440,7 +521,6 @@ void pasteTB (TB tb1, int pos, TB tb2) {
 	TB tb2Copy = NULL;  
 	char *tmp = dumpTB(tb2, false);
 	tb2Copy = newTB(tmp);
-
 	free(tmp);
 	mergeTB(tb1, pos, tb2Copy);
 }
@@ -502,6 +582,7 @@ TB cutTB (TB tb, int from, int to) {
 	}
 	result->length = num;
 	tb->length -= num;
+	pushInCache(tb, from - 1, 0, result);
 	return result;
 }
 
@@ -945,10 +1026,34 @@ char *diffTB (TB tb1, TB tb2) {
  */
 
 void undoTB (TB tb) {
-
+	if(tb->pointer == 0){
+		return;
+	}
+	textCache *cache = tb->cache;
+	(tb->pointer)--;
+	int pointer = tb->pointer;
+	tb->pointer = -1;
+	if(cache[pointer]->type == 0){
+		pasteTB(tb, cache[pointer]->position + 1, cache[pointer]->content);
+	}else if(cache[pointer]->type == 1){
+		deleteTB(tb, cache[pointer]->position + 1, cache[pointer]->content->length);
+	}
+	tb->pointer = pointer;
 }
 
 void redoTB (TB tb) {
-
+	if(tb->pointer > 9 || tb->cache[tb->pointer] == NULL){
+		return;
+	}else{
+		textCache *cache = tb->cache;
+		int pointer = tb->pointer;
+		tb->pointer = -1;
+		if(cache[pointer]->type == 1){
+			pasteTB(tb, cache[pointer]->position + 1, cache[pointer]->content);
+		}else if(cache[pointer]->type == 0){
+			deleteTB(tb, cache[pointer]->position + 1, cache[pointer]->content->length);
+		}
+		tb->pointer = pointer + 1;
+	}
 }
 
