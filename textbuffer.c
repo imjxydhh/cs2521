@@ -526,7 +526,10 @@ void pasteTB (TB tb1, int pos, TB tb2) {
  */
 TB cutTB (TB tb, int from, int to) {
 	CheckInBound(tb, NULL, &from, &to);
-	
+
+	// This variable is used to remember the position for pushInCache()
+	int pos = from;
+
 	// The number of nodes which will be cut
 	int num = to - from + 1;
 
@@ -573,7 +576,7 @@ TB cutTB (TB tb, int from, int to) {
 	}
 	result->length = num;
 	tb->length -= num;
-	pushInCache(tb, from - 1, 0, result);
+	pushInCache(tb, pos - 1, 0, result);
 	return result;
 }
 

@@ -12,29 +12,77 @@
 
 #include "textbuffer.h"
 
-//static void testNewTB(void);
+// static void testNewTB(void);
 //static void showList(TB tb);
-//static void testAddPrefix();
-//static void testMergeTB(void);
-//static void testPasteTB(void);
-//static void testCutTB(void);
-//static void testSearchTB();
-//static void testFormRichText();
-//static void testDiffTB();
+// static void testAddPrefix();
+// static void testMergeTB(void);
+// static void testPasteTB(void);
+// static void testCutTB(void);
+// static void testSearchTB();
+// static void testFormRichText();
+// static void testDiffTB();
+static void testUnReDo();
 
 int main(void) {
-	//testMergeTB();
-	//testNewTB();
-	//testAddPrefix();
-	//testPasteTB();
-	//testCutTB();
-	//testSearchTB();
-	//testFormRichText();
-	//testDiffTB();
+	// testMergeTB();
+	// testNewTB();
+	// testAddPrefix();
+	// testPasteTB();
+	// testCutTB();
+	// testSearchTB();
+	// testFormRichText();
+	// testDiffTB();
+	testUnReDo();
 	// TODO: Call more test functions
 	
 	
 	printf("All tests passed! You are awesome!\n");
+}
+
+static void testUnReDo(){
+	printf("-----------------------------------------\n"
+	       "             undo redo tests             \n"
+	       "-----------------------------------------\n");
+	TB tb1 = newTB("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n");
+	undoTB(tb1);
+	char *text1 = dumpTB(tb1,false);
+	assert(strcmp("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n", text1) == 0);
+	free(text1);
+
+	deleteTB(tb1, 2, 5);
+	undoTB(tb1);
+	text1 = dumpTB(tb1,false);
+	assert(strcmp("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n", text1) == 0);
+	free(text1);
+
+	redoTB(tb1);
+	text1 = dumpTB(tb1, false);
+	assert(strcmp("1\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n", text1) == 0);
+	free(text1);
+
+	redoTB(tb1);
+	text1 = dumpTB(tb1, false);
+	assert(strcmp("1\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n", text1) == 0);
+	free(text1);
+
+	for(int i = 6;i < 15;i++){
+		deleteTB(tb1, 2, 2);
+	}
+	//printf("*%s*", text1);
+	redoTB(tb1);
+	text1 = dumpTB(tb1, false);
+	assert(strcmp("1\n15\n16\n17\n18\n19\n", text1) == 0);
+	free(text1);
+
+	deleteTB(tb1, 2, 2);
+
+	undoTB(tb1);
+	text1 = dumpTB(tb1,false);
+	assert(strcmp("1\n15\n16\n17\n18\n19\n", text1) == 0);
+	
+	free(text1);
+	releaseTB(tb1);
+	printf("undoTB redoTB tests passed!\n");
 }
 
 /*static void testDiffTB(){
@@ -92,7 +140,7 @@ int main(void) {
 	TB tb1 = newTB("abcdefghijklmnopqrst\n2\n3\n4\n5\n");
 	TB tb2 = newTB("");
 	int totLen = linesTB(tb1) + linesTB(tb2);
-	mergeTB(tb1, 7, tb2);
+	mergeTB(tb1, 6, tb2);
 	assert(linesTB(tb1) == totLen);
 	char *text1 = dumpTB(tb1, true);
 	//printf("*%s*\n", text1);	
@@ -211,7 +259,7 @@ int main(void) {
 	// Calling dumpTB immediately after newTB, without modifying the TB
 	TB tb1 = newTB("\naa\n\n\naa\n");
 	assert(linesTB(tb1) == 5);
-	addPrefixTB(tb1, 0, 7 , "prefix");
+	addPrefixTB(tb1, 1, 3 , "prefix");
 	char *text1 = dumpTB(tb1, false); // Don't show line numbers
 	//printf("*%s*\n", text1);
 	assert(strcmp("prefix\nprefixaa\nprefix\n\naa\n", text1) == 0);
