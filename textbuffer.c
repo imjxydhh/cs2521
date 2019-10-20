@@ -55,7 +55,7 @@ static void pushInCache(TB tb, int position, int type, TB content){
 		return;
 	}
 	char *tmp = dumpTB(content, false);
-	TB tbCopy = newTB(tmp);
+	TB contentCopy = newTB(tmp);
 	free(tmp);
 	textCache operation = malloc(sizeof(*operation));
 	if(operation == NULL){
@@ -63,10 +63,11 @@ static void pushInCache(TB tb, int position, int type, TB content){
 		releaseTB(tb);
 		abort();
 	}
-	operation->content = tbCopy;
+	operation->content = contentCopy;
 	operation->position = position;
 	operation->type = type;
 	if(tb->pointer < 10){
+	// The case that cache is not full(less than 10 operations)
 		if(tb->cache[tb->pointer] != NULL){
 			releaseTB(tb->cache[tb->pointer]->content);
 			free(tb->cache[tb->pointer]);
@@ -74,18 +75,27 @@ static void pushInCache(TB tb, int position, int type, TB content){
 		tb->cache[tb->pointer] = operation;
 		(tb->pointer)++;
 		if((tb->pointer < 10) && tb->cache[tb->pointer] != NULL){
+		/** 
+		 * The next position(as we've incremented tb->pointer) isn't NULL means 
+		 * that we have just called some undo() functions. We need to make the 
+		 * operation at the nexxt position invalid to prevent redo() doing the same
+		 * operation again
+		 */
 			releaseTB(tb->cache[tb->pointer]->content);
 			free(tb->cache[tb->pointer]);
 			tb->cache[tb->pointer] = NULL;
 		}
 	}else if(tb->pointer == 10){
+	// The case that cache is full(10 operations)
 		releaseTB(tb->cache[0]->content);
 		free(tb->cache[0]);
 		memmove(tb->cache, tb->cache + 1, sizeof(textCache) * 9);
 		tb->cache[tb->pointer - 1] = operation;
 	}else{
+	// Should never reached here
 		fprintf(stderr,"Internal error: Abnormal value");
-		releaseTB(tbCopy);
+		releaseTB(tb);
+		releaseTB(contentCopy);
 		free(operation);
 	}
 }
@@ -1021,27 +1031,42 @@ char *diffTB (TB tb1, TB tb2) {
 
 void undoTB (TB tb) {
 	if(tb->pointer == 0){
+	// The case that the maximum number of operations has been reached, do nothing 
 		return;
 	}
 	textCache *cache = tb->cache;
 	(tb->pointer)--;
 	int pointer = tb->pointer;
+
+	/** 
+	 * Set the pointer of cache to a special value to mark the operation that 
+	 * will be done below  as special operation to prevent pushing that opearation
+	 * into cache
+	 */
 	tb->pointer = -1;
+
+	// Choose corresponding reverse operation 
 	if(cache[pointer]->type == 0){
 		pasteTB(tb, cache[pointer]->position + 1, cache[pointer]->content);
 	}else if(cache[pointer]->type == 1){
 		deleteTB(tb, cache[pointer]->position + 1, cache[pointer]->position + cache[pointer]->content->length);
 	}
+
+	// Restore pointer
 	tb->pointer = pointer;
 }
 
 void redoTB (TB tb) {
 	if(tb->pointer > 9 || tb->cache[tb->pointer] == NULL){
+	// The case that no undo() has been called so do nothing
 		return;
 	}else{
 		textCache *cache = tb->cache;
 		int pointer = tb->pointer;
+
+		// Same reason to undo
 		tb->pointer = -1;
+
 		if(cache[pointer]->type == 1){
 			pasteTB(tb, cache[pointer]->position + 1, cache[pointer]->content);
 		}else if(cache[pointer]->type == 0){

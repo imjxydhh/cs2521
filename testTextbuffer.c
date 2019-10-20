@@ -65,10 +65,9 @@ static void testUnReDo(){
 	assert(strcmp("1\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n", text1) == 0);
 	free(text1);
 
-	for(int i = 6;i < 15;i++){
+	for(int i = 0;i < 9;i++){
 		deleteTB(tb1, 2, 2);
 	}
-	//printf("*%s*", text1);
 	redoTB(tb1);
 	text1 = dumpTB(tb1, false);
 	assert(strcmp("1\n15\n16\n17\n18\n19\n", text1) == 0);
@@ -79,9 +78,39 @@ static void testUnReDo(){
 	undoTB(tb1);
 	text1 = dumpTB(tb1,false);
 	assert(strcmp("1\n15\n16\n17\n18\n19\n", text1) == 0);
-	
+	free(text1);
+
+	for(int i = 0;i< 9;i++){
+		undoTB(tb1);
+	}
+	undoTB(tb1);
+	text1 = dumpTB(tb1, false);
+	assert(strcmp("1\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n", text1) == 0);
+	free(text1);
+
+	for(int i = 0;i< 9;i++){
+		redoTB(tb1);
+	}	
+	text1 = dumpTB(tb1, false);
+	assert(strcmp("1\n15\n16\n17\n18\n19\n", text1) == 0);
+	free(text1);
+
+	undoTB(tb1);
+	TB tb2 = newTB("insert1\ninsert2\ninsert3\n");
+	pasteTB(tb1, 2, tb2);
+	redoTB(tb1);
+	text1 = dumpTB(tb1, false);
+	//printf("*%s*", text1);	
+	assert(strcmp("1\ninsert1\ninsert2\ninsert3\n14\n15\n16\n17\n18\n19\n", text1) == 0);
+	free(text1);
+
+	undoTB(tb1);
+	text1 = dumpTB(tb1, false);	
+	assert(strcmp("1\n14\n15\n16\n17\n18\n19\n", text1) == 0);
+
 	free(text1);
 	releaseTB(tb1);
+	releaseTB(tb2);
 	printf("undoTB redoTB tests passed!\n");
 }
 
