@@ -130,8 +130,8 @@ static Node newNode(char *text, int size){
  */
 TB newTB (char *text) {
 	if(text == NULL){
-		fprintf(stderr, "argument can not be null.\n");
-		return NULL;
+		fprintf(stderr, "Text can not be null.\n");
+		abort();
 	}
 	TB new = malloc(sizeof(*new));
 	if(new == NULL){
@@ -272,8 +272,8 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 	if(tb == NULL){
 	// the case that textBuffer doesn't exist.
 		fprintf(stderr, "The textBuffer doesn't exist.\n");
-		return NULL;
-	}else if(tb->curr == NULL){
+		abort();
+	}else if(tb->first == NULL){
 	// the case that tb is empty
 		char *empty = malloc(sizeof(char));
 		*empty = 0;
@@ -287,7 +287,8 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 	str = allocStr(str, size);
 	if(str == NULL){
 		fprintf(stderr, "Memory allocation failed.\n");
-		return NULL;
+		releaseTB(tb);
+		abort();
 	}
 	while(curr != NULL){
 		if((int)strlen(curr->data) >= (int)(size - strlen(str) - (showLineNumbers?4:1))){
@@ -301,7 +302,8 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 			size += 100;
 			if(str == NULL){
 				fprintf(stderr, "Memory allocation failed.\n");
-				return NULL;
+				releaseTB(tb);
+				abort();
 			}
 		}
 		char *thisLine = NULL;
@@ -310,7 +312,8 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 			if(prefix == NULL){
 				fprintf(stderr, "Memory allocation failed.\n");
 				free(str);
-				return NULL;
+				releaseTB(tb);
+				abort();
 			}
 			thisLine = strcat(prefix, curr->data);
 		}else{
@@ -319,7 +322,7 @@ char *dumpTB (TB tb, bool showLineNumbers) {
 		strcat(str, thisLine);
 		if(showLineNumbers){
 		/** 
-		 * in this condition, thisLine(prefix) is seperately allocated and 
+		 * in this condition, thisLine is seperately allocated and 
 		 * will not be used again. it needs to be freed
 		 */	
 			free(thisLine);
@@ -360,7 +363,7 @@ static void CheckInBound(TB mainTB, TB maybe, int *mainPos, int *maybePos){
 		state = 1;
 	}else if(maybePos == NULL){
 		if(*mainPos < 1 || *mainPos > mainTB->length){
-				// index out of bound
+		// index out of bound
 			fprintf(stderr, "Index out of boundary!\n");
 			releaseTB(mainTB);
 			state = 1;
@@ -438,17 +441,21 @@ void mergeTB (TB tb1, int pos, TB tb2) {
 	if(pos != tb1->length + 1){
 		CheckInBound(tb1, tb2, &pos, NULL);
 	}
-	if(tb2 == NULL){
-		fprintf(stderr, "TextBuffer tb2 doesn't exist.\n");
-		releaseTB(tb1);
+	if(tb2 == NULL || tb1 == NULL){
+		fprintf(stderr, "TextBuffer doesn't exist.\n");
+		if(tb1 != NULL){
+			releaseTB(tb1);
+		}
+		if(tb2 != NULL){
+			releaseTB(tb2);
+		}
 		abort();
 	}else if(tb1 == tb2){
 	// Ignore the case that merge a textBuffer with itself
 		return;
 	}else if(tb1->first == NULL){
 	// tb1 is empty
-		tb1->first = tb2->first;
-		tb1->curr = tb2->curr;
+		tb1->first = tb1->curr = tb2->first;
 		tb1->last = tb2->last;
 		tb1->length = tb2->length;
 		free(tb2);
@@ -488,7 +495,7 @@ void mergeTB (TB tb1, int pos, TB tb2) {
 	 * theLine != NULL means that we are not trying to append tb2 to tb1
 	 * When appending tb2 to tb1, theLine will be NULL at last  
 	 */
-		theLine->prev = tb2->last->next;
+		theLine->prev = tb2->last;
 	}
 	tb1->length = tb1->length + tb2->length;
 	//printf("**now tb1:\nfirst %s\ncurr %s\nlast %s\n",tb1->first->data,tb1->curr->data, tb1->last->data); ******only for testing******
@@ -509,9 +516,14 @@ void pasteTB (TB tb1, int pos, TB tb2) {
 	if(pos != tb1->length + 1){
 		CheckInBound(tb1, tb2, &pos, NULL);
 	}
-	if(tb2 == NULL){
-		fprintf(stderr, "TextBuffer tb2 doesn't exist.\n");
-		releaseTB(tb1);
+	if(tb2 == NULL || tb1 == NULL){
+		fprintf(stderr, "TextBuffer doesn't exist.\n");
+		if(tb1 != NULL){
+			releaseTB(tb1);
+		}
+		if(tb2 != NULL){
+			releaseTB(tb2);
+		}
 		abort();
 	}else if(tb2->first == NULL){
 	// tb2 is empty
@@ -600,9 +612,9 @@ static void prefixFunction(int *result, char *text){
 	for(int q = 1;q < strlen(text) - 1; q++){
 	/** 
 	 * here the threshold is strlen(text) - 1 beacause
-	 * each results will not overlab with each other. If
+	 * each results will not overlap with each other. If
 	 * we find a full match, we will just start searching 
-	 * next match from the end of this match
+	 * next match from next character of this match
 	 */
 		while(text[k] != text[q] && k > 0){
 			k = result[k - 1];
@@ -619,6 +631,9 @@ static void prefixFunction(int *result, char *text){
  */ 
 static Match newMatchNode(int line, int col){
 	Match newNode = malloc(sizeof(*newNode));
+	if(newNode == NULL){
+		return NULL;
+	}
 	newNode->columnNumber = col;
 	newNode->lineNumber = line;
 	newNode->next = NULL;
@@ -679,10 +694,25 @@ Match searchTB (TB tb, char *search) {
 				if(result == NULL){
 				// the case that there is no node in the list yet
 					result = newMatchNode(lineNum, shift - strlen(search) + 2);
+					if(result == NULL){
+						fprintf(stderr, "Memory allocation failed.\n");
+						releaseTB(tb);
+						abort();
+					}
 					currMatch = result;
 				}else{
 				// the case that the list contains at least one node
 					currMatch->next = newMatchNode(lineNum, shift - strlen(search) + 2);
+					if(currMatch->next == NULL){
+						fprintf(stderr, "Memory allocation failed.\n");
+						releaseTB(tb);
+						while (result != NULL){
+							Match tmp = result->next;
+							free(result);
+							result = tmp;
+						}
+						abort();
+					}
 					currMatch = currMatch->next;
 				}
 
@@ -1028,6 +1058,7 @@ char *diffTB (TB tb1, TB tb2) {
  * Declaration: This funtion uses Dynamic programming, but it's entirely written by
  *              myself and no pseudocode is followed 
  */
+
 
 void undoTB (TB tb) {
 	if(tb->pointer == 0){
