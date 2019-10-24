@@ -195,12 +195,6 @@ TB newTB (char *text) {
 			
 		}
 	}
-	// used to test, remember to delete 
-	/*Node current = new->first;
-	while(current != NULL){
-		printf("*%s*\n", current->data);
-		current = current->next;
-	}*/
 	return new;
 }
 
@@ -498,7 +492,6 @@ void mergeTB (TB tb1, int pos, TB tb2) {
 		theLine->prev = tb2->last;
 	}
 	tb1->length = tb1->length + tb2->length;
-	//printf("**now tb1:\nfirst %s\ncurr %s\nlast %s\n",tb1->first->data,tb1->curr->data, tb1->last->data); ******only for testing******
 	free(tb2);
 }
 
