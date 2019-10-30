@@ -10,17 +10,17 @@
 
 NodeValues closenessCentrality(Graph g) {
 	NodeValues nvs = {0};
-	return values;
+	return nvs;
 }
 
 NodeValues betweennessCentrality(Graph g) {
 	NodeValues nvs = {0};
-	return values;
+	return nvs;
 }
 
 NodeValues betweennessCentralityNormalised(Graph g) {
 	NodeValues nvs = {0};
-	return values;
+	return nvs;
 }
 
 void showNodeValues(NodeValues nvs) {

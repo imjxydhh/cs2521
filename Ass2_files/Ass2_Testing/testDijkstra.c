@@ -31,13 +31,12 @@ void displayShortestPathsStruct(ShortestPaths sps) {
 		for (int j = 1; j < numPreds; j++) {
 			int temp = preds[j];
 			int k = j;
-			while (preds[k - 1] > temp && k > 0) {
+			while (k > 0 && preds[k - 1] > temp) {
 				preds[k] = preds[k - 1];
 				k--;
 			}
 			preds[k] = temp;
 		}
-		
 		for (int j = 0; j < numPreds; j++) {
 			printf("[%d]->", preds[j]);
 		}
