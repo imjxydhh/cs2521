@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 	NodeValues (*fn)(Graph) = NULL;
 	
 	Graph g = readGraph(argv[1]);
-
+	// GraphShow(g);
 	if (argv[2][0] == 'c' && argv[2][1] == '\0') {
 		fn = closenessCentrality;
 	} else if (argv[2][0] == 'b' && argv[2][1] == '\0') {

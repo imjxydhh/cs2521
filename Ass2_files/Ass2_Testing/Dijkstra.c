@@ -17,11 +17,18 @@ ShortestPaths dijkstra(Graph g, Vertex src) {
 	ShortestPaths result = newPath(src, size);
 	
 	PQ pq = PQNew();
-
+	int visited[size];
+    for(int i = 0;i < size; i++){
+		visited[i] = 0;
+	}	
 	PQAdd(pq, (ItemPQ){src, 0});
 	while(!PQIsEmpty(pq)){
 	// Priority queue is empty means that all reachable vertex has been visited
 		ItemPQ min = PQDequeue(pq);
+		if(visited[min.key]){
+			continue;
+		}
+		visited[min.key] = 1;
 		AdjList curr =  GraphOutIncident(g, min.key);
 		while(curr != NULL){
 		// Go through all incident edges of the current minimum node
