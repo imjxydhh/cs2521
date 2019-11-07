@@ -159,7 +159,7 @@ void freeNodeValues(NodeValues nvs) {
 }
 
 /**
- * As the number of shortest paths(no matter if we need the path to pass through some vertex) 
+ * As the number of shortest paths(no matter if we need个it the path to pass through some vertex) 
  * from one vertex to another vertex, we only need to konw the number of paths from src to the 
  * precede nodes in all possible shortest path. So we could write this function in a recursive way 
  * @param paths : The shortestPath array 
