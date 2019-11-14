@@ -17,7 +17,9 @@ static Dendrogram newDNode(Vertex i);
  * to Complete linkage and Single linkage 
  */
 static double max(double n1, double n2){
-    
+    if(n1 == -1 || n2 == -1){
+        return -1;
+    }
     return n1>n2?n1:n2;
 }
 static double min(double n1, double n2){
@@ -102,8 +104,14 @@ Dendrogram LanceWilliamsHAC(Graph g, int method) {
         int dest = 0;
         for(int i = 0;i < numV;i++){
             for(int j = i + 1;j < numV;j++){
-                if(dist[i][j] != -1){
+                if(dist[i][j] != -1 && dist[i][j] != -2){
                     if(min == -1 || dist[i][j] < min){
+                        src = i;
+                        dest = j;
+                        min = dist[i][j];
+                    }
+                }else if(dist[i][j] == -1){
+                    if(min == -1){
                         src = i;
                         dest = j;
                         min = dist[i][j];
@@ -127,7 +135,7 @@ Dendrogram LanceWilliamsHAC(Graph g, int method) {
                 dist[src][i] = dist[i][src] = fun(dist[src][i], dist[dest][i]);
             }
             // As one cluster is merged into another cluster, all position related to that cluster is set to infinite
-            dist[dest][i] = dist[i][dest] = -1;
+            dist[dest][i] = dist[i][dest] = -2;
         }
         
         num--;

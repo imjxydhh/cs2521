@@ -101,20 +101,12 @@ NodeValues betweennessCentrality(Graph g) {
 				}
 				if(pathNum[j][k]){
 					sum += ((double)pathNumV[j][k][i] / pathNum[j][k]);
-					// printf("Vertex: %d;sigma(%d,%d)(v): %d;sigma(%d,%d): %d\n", i,j,k, pathNumV[j][k][i],j,k, pathNum[j][k]);
 				}
 			}
 		}
 		nvs.values[i] = sum;
 	}
-	// printf("%d\n", pathNum[47][46]);getchar();
-	/* for (Vertex i = 0; i < nums; i++){
-		for(Vertex j = 0;j < nums;j++){
-			printf("%d ", pathNum[i][j]);
-		}
-		printf("\n");
-	}  */
-
+	
 	// Free all allocated memory
 	for(Vertex i = 0;i < nums;i++){
 		freeShortestPaths(paths[i]);
