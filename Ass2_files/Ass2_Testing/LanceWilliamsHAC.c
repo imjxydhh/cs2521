@@ -105,6 +105,7 @@ Dendrogram LanceWilliamsHAC(Graph g, int method) {
         for(int i = 0;i < numV;i++){
             for(int j = i + 1;j < numV;j++){
                 if(dist[i][j] != -1 && dist[i][j] != -2){
+                // Here -2 means that the cluster has been merged into another cluster so just ignore
                     if(min == -1 || dist[i][j] < min){
                         src = i;
                         dest = j;
@@ -134,7 +135,10 @@ Dendrogram LanceWilliamsHAC(Graph g, int method) {
             if(gram[i] != NULL && src != i){
                 dist[src][i] = dist[i][src] = fun(dist[src][i], dist[dest][i]);
             }
-            // As one cluster is merged into another cluster, all position related to that cluster is set to infinite
+
+            /** As one cluster is merged into another cluster, all position related to that cluster is set to -2
+             *  -2 means that this cluster does not exist any longer
+             */
             dist[dest][i] = dist[i][dest] = -2;
         }
         
